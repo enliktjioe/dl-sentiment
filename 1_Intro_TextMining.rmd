@@ -193,6 +193,11 @@ b. Use the Insert button on the top right of your source pane and choose R
 2. In the chunk you just created, try to type `1+100`. Run the chunk and see what happen!
 3. Add `#` symbol in the beginning of `1+100`. Run the chunk again and see what happen!
 
+```{r}
+1+100
+```
+
+
 __*Notes: Running the code chunk*__  
 RStudio offers you great flexibility in running code from within the editor window. There are buttons, menu choices, and keyboard shortcuts. To run the current line, you can:
 
@@ -232,6 +237,15 @@ price
 1. Insert a new chunk below (again, you can choose whatever is convenient for you; whether by using a shortcut or the insert button)!  
 2. Create a new variable, name it `participants`, pick at least 3 random names from the participants in this Zoom meeting (you may also use your friends' name if you are not joining the Zoom session)! 
 3. Try to call again the values you just stored in `participants`, but change the text to uppercase (`PARTICIPANTS`) and see what happen!
+
+```{r}
+participants <- c("Enlik","Farhan","Mika")
+participants
+```
+
+```{r}
+toupper(participants)
+```
 
 ----
 
