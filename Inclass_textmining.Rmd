@@ -1,0 +1,147 @@
+---
+title: "Hands On: American Airlines Sentiment"
+author: "Tanesya"
+date: "2/24/2021"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+    number_sections: false
+    theme: flatly
+    highlight: tango
+    css: assets/style.css
+---
+
+```{r setup, include=FALSE}
+# clean up the environment
+rm(list = ls())
+# setup chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>"
+)
+options(scipen = 9999)
+```
+
+```{r}
+ # Data Wrangling
+library(tidyverse) 
+library(lubridate)
+
+# Text analysis
+library(textclean)
+library(tidytext)
+```
+
+# "American Airlines" Sentiment Analysis
+
+Let's start by reading our data. The data we'll be using for this workshop is a dataset from [Kaggle](https://www.kaggle.com/crowdflower/twitter-airline-sentiment/home), a text data consists of 14.64 tweets about airlines companies in US:
+
+```{r}
+tweets <- read_csv("data/airlines.csv") 
+glimpse(tweets) # equivalent with `str()`
+```
+
+```{r}
+count(tweets, label)
+```
+
+```{r}
+tweets_aa <- tweets %>% 
+  filter(airline == "American") %>% 
+  select(text, label, tweet_created) %>% 
+  mutate(
+    tweet_created = as.Date(tweet_created),
+    label = as.factor(label)
+  )
+
+glimpse(tweets_aa)
+```
+
+## Text Cleaning
+
+**Example**:
+
+```{r}
+text_sample <- "@AmericanAir over the last year 50% of my flights have been delayed or Cancelled.\nI'm done with you #AmericanAirlines http://t.co/DNMsblzumr"
+text_sample
+
+```
+
+The general text cleansing process including:
+
+- Replace URL & HTML
+- Remove username & hashtag
+- Replace contraction
+- Replace word elongation
+- Replace slang words
+- Remove number
+- Remove Punctuation
+- Remove symbols
+- Lower text
+- Remove whitespace
+
+```{r}
+tweets_aa <- tweets %>%
+  mutate(
+    text_clean = text %>%
+      replace_url()  %>% 
+      replace_html() %>% 
+      str_remove_all("@([0-9a-zA-Z_]+)") %>% # remove username
+      str_remove_all("#([0-9a-zA-Z_]+)") %>% # remove hashtag
+      replace_contraction() %>%
+      replace_word_elongation() %>% 
+      replace_internet_slang() %>% 
+      str_remove_all(pattern = "[[:digit:]]") %>% # remove number
+      str_remove_all(pattern = "[[:punct:]]") %>% 
+      str_remove_all(pattern = "%") %>% 
+      str_remove_all(pattern = "\\$") %>% # remove dollar sign
+      str_to_lower() %>% # transform menjadi huruf kecil
+      str_squish()  # remove extra whitespace
+  ) 
+
+head(tweets_aa)
+```
+
+## Tokenize & Remove Stopwords
+
+### Tokenize
+
+```{r}
+tweets_aa <- tweets_aa %>% 
+  select(text_clean, label) %>% 
+  unnest_tokens(word, text_clean)
+```
+
+### Remove Stopwords
+
+```{r}
+tweets_aa <- tweets_aa %>% 
+  anti_join(stop_words)
+```
+
+## Text Visualization
+
+### Get most frequent word
+
+```{r}
+tweets_aa <- tweets_aa %>% 
+  count(word, label, sort = T) %>% 
+  group_by(label) %>% 
+  top_n(20)
+```
+
+### Create wordcloud
+
+```{r}
+ggplot(tweets_aa, aes(label = word)) +
+  ggwordcloud::geom_text_wordcloud(aes(size=n, color = label)) +
+  facet_wrap(~label, scales = "free_y") +
+  scale_size_area(max_size = 15) 
+```
+
+
