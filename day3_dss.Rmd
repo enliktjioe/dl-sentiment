@@ -1,0 +1,98 @@
+---
+title: "day3-dss"
+author: "Anggini"
+date: "2/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(neuralnet)
+```
+
+
+```{r}
+y <- c(0,1,1,0)
+dat <-  data.frame(expand.grid(c(0,1), c(0,1), c(1,2)), y)
+
+set.seed(100)
+dat <- dat %>% 
+  mutate(y = runif(nrow(dat), 3, 4) + sum(dat[1:2,]) + dat$Var3^2)
+
+head(dat)
+```
+
+
+```{r}
+set.seed(100)
+
+model1 <- neuralnet(
+    formula = y~. , #prediksi y berdasarkan semua prediktor
+    data = dat, #data yang digunakan adalah data "dat"
+    hidden = 4 , # membuat 4 nodes pada 1 hidden layer
+    linear.output = TRUE, # utk kasus regresi isi True
+    #startweights = 1, # inisiasi awal
+    rep = 5 # membuat 5 model sekaligus
+    )
+
+plot(model1, rep = "best") #best mengembalikan model dengan error terkecil
+```
+
+
+Proses training model 
+1. Neural network memberikan **Pembobotan awal secara random** untuk setiap node
+2. Aliran informasi terjadi untuk melakukan prediksi dari input -> hidden -> output layer 
+3. Dari hasil 1 feed forward akan didapatkan **error (cost function)** dari hasil prediksi
+4. Model "belajar dari kesalahan" dengan menyalurkan kembali informasi error ke node-node sebelumnya (**back propragration**) sehingga bobot dapat diperbaiki (**diupdate**)
+- satu kali rangkaian proses update (1 kali feed forward + 1 back prop) disebut **epoch** atau **steps**
+
+5. model akan terus update bibit hingga didapatkan error terkecil. 
+Pada contoh diatas 283 step/epoch untuk mendapatkan error terkecil
+
+
+## Deep learning with NN
+
+
+```{r}
+set.seed(100)
+
+model1 <- neuralnet(
+    formula = y~. , #prediksi y berdasarkan semua prediktor
+    data = dat, #data yang digunakan adalah data "dat"
+    hidden = c(3,4), # membuat 4 nodes pada 1 hidden layer
+    linear.output = TRUE, # utk kasus regresi isi True
+    #startweights = 1, # inisiasi awal
+    rep = 5 # membuat 5 model sekaligus
+    )
+
+plot(model1, rep = "best") #best mengembalikan model dengan error terkecil
+
+
+```
+
+
+cara menentukan hidden layer dan nodes 
+1. experience (trial n error)
+2. intuition 
+3. search :
+- random
+- grid 
+
+deep learning semakin besar data dan kompleks maka membutuhkan komputasi yang besar
+
+
+
+
+
+
+
+
+
+
+
+
+
