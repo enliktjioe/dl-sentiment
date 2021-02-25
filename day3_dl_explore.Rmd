@@ -1,0 +1,100 @@
+---
+title: "day3_dl_explore"
+author: "Enlik Tjioe"
+date: "2/25/2021"
+output: html_document
+---
+
+```{r}
+# # Data Wrangling
+library(tidyverse) 
+library(lubridate)
+library(magrittr)
+
+# Text analysis
+library(textclean)
+library(tidytext)
+library(tm)
+
+# Modeling
+library(caret)
+library(keras)
+library(yardstick)
+
+# set conda env
+use_condaenv("r-tensorflow")
+```
+
+# Case Study: Airlines Sentiment Analysis with LSTM
+
+- Using tweet data related to airlines
+```{r}
+data <- read_csv("data/airlines.csv") %>% 
+  select(text, label)
+
+head(data)
+```
+
+## Text Pre-processing
+### Text Cleaning
+
+```{r}
+data <- data %>%
+  mutate(
+    text = text %>%
+      replace_url()  %>% 
+      replace_html() %>% 
+      str_remove_all("@([0-9a-zA-Z_]+)") %>% 
+      str_remove_all("#([0-9a-zA-Z_]+)") %>% 
+      str_replace_all("[\\?]+", " questionmark ") %>% 
+      str_replace_all("[\\!]+", " exclamationmark ") %>% 
+      str_remove_all('[\\&]+') %>% 
+      str_remove_all('[\\"]+') %>% 
+      replace_contraction() %>%
+      replace_word_elongation() %>% 
+      replace_internet_slang() %>% 
+      str_remove_all(pattern = "[[:digit:]]") %>% # remove number
+      str_remove_all(pattern = "[[:punct:]]") %>% 
+      str_remove_all(pattern = "\\$") %>% # remove dollar sign
+      str_to_lower() %>% 
+      str_squish(), 
+    label = base::factor(label, levels = c("negative", "neutral", "positive")) %>% 
+                     as.numeric() %>% {. - 1}
+  ) %>% 
+  select(text, label) %>% 
+  na.omit() # remove NA
+```
+
+### Remove stopwords
+
+```{r}
+rm.stopwords <- VCorpus(VectorSource(data$text)) %>%
+  tm_map(removeWords,stopwords("en")) %>%
+  tm_map(stripWhitespace) %>% 
+  sapply(as.character) %>%
+  as.data.frame(stringsAsFactors = FALSE)
+
+data.clean <- bind_cols(rm.stopwords, data[,2]) %>%
+  `colnames<-`(c("text","label"))
+```
+
+### Tokenizer
+```{r}
+num_words <- 1024 
+
+# prepare tokenizers
+tokenizer <- text_tokenizer(num_words = num_words, lower = TRUE) %>% 
+  fit_text_tokenizer(data.clean$text)
+
+paste(
+  "Total Unique Words:", length(tokenizer$word_counts),"|",
+  "Total Features:", num_words
+)
+```
+
+### Extra Explanation on Tokenizer
+
+```{r}
+
+```
+
