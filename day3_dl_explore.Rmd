@@ -79,6 +79,9 @@ data.clean <- bind_cols(rm.stopwords, data[,2]) %>%
 ```
 
 ### Tokenizer
+
+- this part need tensorflow library installed in python env
+
 ```{r}
 num_words <- 1024 
 
@@ -95,6 +98,149 @@ paste(
 ### Extra Explanation on Tokenizer
 
 ```{r}
+docs <- c('Well done!',
+        'Good work',
+        'Great effort',
+        'nice work',
+        'Excellent!')
 
+tokendocs <- text_tokenizer(num_words = 4, lower = TRUE) %>% 
+  fit_text_tokenizer(docs)
+
+paste("Number of unique words:",length(tokendocs$word_counts))
+```
+```{r}
+tokendocs$word_index[1:4]
+```
+## Split Data
+
+```{r}
+library(rsample)
+set.seed(100)
+
+# split into train - test
+split <- initial_split(data.clean, strata = "label")
+data_train <- training(split)
+data_test <- testing(split)
+
+# split data test to test - validation
+split_val <- initial_split(data.clean, prop = 0.5, strata = "label")
+data_val <- training(split_val)
+data_test <- training(split_val)
+```
+
+## Text to sequence
+```{r}
+maxlen <- max(str_count(data.clean$text, "\\w+")) + 1 # Text cutoff
+  
+# prepare x
+data_train_x <- texts_to_sequences(tokenizer, data_train$text) %>%
+  pad_sequences(maxlen = maxlen)
+
+data_val_x <- texts_to_sequences(tokenizer, data_val$text) %>%
+  pad_sequences(maxlen = maxlen)
+
+data_test_x <- texts_to_sequences(tokenizer, data_test$text) %>%
+  pad_sequences(maxlen = maxlen)
+
+# prepare y
+data_train_y <- to_categorical(data_train$label, num_classes = 3)
+data_val_y <- to_categorical(data_train$label, num_classes = 3)
+data_test_y <- to_categorical(data_test$label, num_classes = 3)
+```
+
+
+```{r}
+texts_to_sequences(tokendocs, c("Excellent!", 
+                                "Good job bro, keep hard work", 
+                                "well done")) %>% 
+pad_sequences(maxlen = 5)
+```
+
+## Build Architecture
+### Model Initialization
+
+```{r}
+# initiate keras model sequence
+model <- keras_model_sequential()
+
+# model
+model %>%
+  # layer input
+  layer_embedding(
+    name = "input",
+    input_dim = num_words,
+    input_length = maxlen, 
+    output_dim = 32
+  ) %>%
+  # layer dropout
+  layer_dropout(
+    name = "embedding_dropout",
+    rate = 0.5
+  ) %>%
+  # layer lstm 1
+  layer_lstm(
+    name = "lstm",
+    units = maxlen,
+    dropout = 0.25,
+    recurrent_dropout = 0.25,
+    return_sequences = FALSE, 
+  ) %>%
+  # layer output
+  layer_dense(
+    name = "output",
+    units = 3,
+    activation = "softmax"
+  )
+```
+### Model Compiling
+
+```{r}
+# compile the model
+model %>% compile(
+  optimizer = "adam",
+  metrics = "accuracy",
+  loss = "categorical_crossentropy"
+)
+
+# model summary
+summary(model)
+```
+### Model Training
+
+```{r}
+library(grid)
+
+# model fit settings
+epochs <- 10
+batch_size <- 128
+
+# fit the model
+history <- model %>% fit(
+  data_train_x, data_train_y,
+  batch_size = batch_size, 
+  epochs = epochs,
+  verbose = 1,
+  validation_data = list(
+    data_test_x, data_test_y
+  )
+)
+
+# history plot
+plot(history)
+```
+![test](img/day3_dl_explore_model_training.png)
+### Model Evaluation
+```{r}
+# predict on test
+data_test_pred <- model %>%
+  predict_classes(data_test_x) %>%
+  as.vector()
+
+# performance on "unseen data"
+accuracy_vec(
+ truth = factor(data_test$label,labels = c("negative", "neutral", "positive")),
+ estimate = factor(data_test_pred, labels = c("negative", "neutral", "positive"))
+)
 ```
 
